@@ -1,0 +1,83 @@
+name: Haberleri güncelle ve yayınla
+
+on:
+  # Haber akışını 30 dakikada bir tazele.
+  # Not: GitHub cron'u garantili değildir, yoğun saatlerde gecikebilir.
+  schedule:
+    - cron: '*/30 * * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Tek seferde tek koşu. Deploy'ları yarıda kesmemek için sıraya alınır.
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write # GitHub Pages'e deploy için
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Depoyu çek
+        uses: actions/checkout@v4
+
+      - name: Node.js kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # 14 günlük haber arşivi koşular arasında burada saklanır.
+      #
+      # Neden repoya commit edilmiyor: news.json ~400 KB. 30 dakikada bir commit
+      # edilse yılda ~2 GB'lık git nesnesi birikir ve GitHub'ın önerdiği 1 GB
+      # depo sınırı aşılır. Cache'te tutmanın maliyeti sıfırdır.
+      #
+      # Cache kaybolursa (7 gün kullanılmama / 10 GB LRU tahliyesi) arşiv tek
+      # koşuda RSS'ten yeniden kurulur — feed'ler zaten ~2 haftalık geçmiş taşıyor.
+      # Kaybedilen tek şey çözülmüş görsel adresleridir, onlar da yeniden aranır.
+      - name: Haber arşivini geri yükle
+        uses: actions/cache/restore@v4
+        with:
+          path: public/news.json
+          key: news-archive-${{ github.run_id }}
+          restore-keys: |
+            news-archive-
+
+      - name: Bağımlılıkları kur
+        run: npm ci
+
+      # Hiçbir API anahtarı gerekmez: çeviri yapılmaz, kategoriler kural
+      # motoruyla atanır, eksik görseller haber sayfasından çözülür.
+      - name: Haberleri topla, mükerrerleri ayıkla ve görselleri çöz
+        run: npm run news
+
+      - name: Haber arşivini kaydet
+        uses: actions/cache/save@v4
+        with:
+          path: public/news.json
+          key: news-archive-${{ github.run_id }}
+
+      - name: Siteyi derle
+        run: npm run build
+
+      - name: Pages yapılandır
+        uses: actions/configure-pages@v5
+
+      - name: Derlenmiş siteyi yükle
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: GitHub Pages'e yayınla
+        id: deployment
+        uses: actions/deploy-pages@v4

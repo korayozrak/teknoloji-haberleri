@@ -1,0 +1,17 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Üretilen haber verisi. Repoya commit edilmez; koşular arasında
+# GitHub Actions cache'inde saklanır (bkz. .github/workflows/deploy.yml).
+public/news.json
+
+# Kişisel editör/araç ayarları
+.claude/settings.local.json
+.vscode/
+.idea/
