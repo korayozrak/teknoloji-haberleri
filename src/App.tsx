@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { NewsItem } from "./types";
-import { NEWS_ENDPOINT } from "./config";
 import NewsCard from "./components/NewsCard";
 import {
   RefreshCw,
@@ -26,14 +25,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>("Tümü");
   const [selectedLang, setSelectedLang] = useState<string>("all"); // "all", "tr", "en"
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
-
-  // Sunucunun bu tarama hakkında döndürdüğü özet (kaç kaynak yanıt verdi, süre...)
-  const [meta, setMeta] = useState<{
-    sources: number;
-    total: number;
-    withImage: number;
-    elapsedMs: number;
-  } | null>(null);
+  const [dateRange, setDateRange] = useState<"all" | "24h" | "3d" | "7d">("all");
 
   // Real-time UTC clock
   const [currentTime, setCurrentTime] = useState<string>("");
@@ -51,9 +43,9 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Haber akışını canlı olarak çek.
-  // Sunucu her istekte 22 RSS kaynağını baştan tarar; hiçbir yerde önbellek
-  // tutulmaz, bu yüzden istek birkaç saniye sürebilir.
+  // Haber akışını statik veri dosyasından çek.
+  // Dosya GitHub Actions cron'u tarafından üretilir; cache-bust parametresi
+  // CDN'in bayat kopyası yerine en son üretilen sürümü almamızı sağlar.
   const fetchNews = async (force: boolean = false) => {
     if (force) {
       setRefreshing(true);
@@ -63,13 +55,11 @@ export default function App() {
     setError(null);
 
     try {
-      const res = await fetch(`${NEWS_ENDPOINT}?t=${Date.now()}`, { cache: "no-store" });
-      if (!res.ok) throw new Error(`Haber akışı alınamadı (HTTP ${res.status}).`);
+      const res = await fetch(`./news.json?t=${Date.now()}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("Haber akışı alınamadı.");
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
       setNews(data.news || []);
       setLastUpdated(data.lastUpdated ?? null);
-      setMeta(data.meta ?? null);
     } catch (err: any) {
       console.error("Fetch news failed:", err);
       setError(err.message || "Haberler yüklenirken beklenmedik bir hata oluştu.");
@@ -128,7 +118,18 @@ export default function App() {
 
       const matchesLang = selectedLang === "all" || item.lang === selectedLang;
 
-      return matchesSearch && matchesCategory && matchesLang;
+      // Date range filter
+      const itemAgeMs = Date.now() - item.timestamp;
+      let matchesDate = true;
+      if (dateRange === "24h") {
+        matchesDate = itemAgeMs <= 24 * 60 * 60 * 1000;
+      } else if (dateRange === "3d") {
+        matchesDate = itemAgeMs <= 3 * 24 * 60 * 60 * 1000;
+      } else if (dateRange === "7d") {
+        matchesDate = itemAgeMs <= 7 * 24 * 60 * 60 * 1000;
+      }
+
+      return matchesSearch && matchesCategory && matchesLang && matchesDate;
     })
     .sort((a, b) => {
       if (sortBy === "newest") {
@@ -249,17 +250,48 @@ export default function App() {
 
             {/* Custom filters and sorting row */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-900/60 pt-3.5">
-              {/* Tarama özeti. Zaman aralığı filtresi kaldırıldı: akış zaten
-                  yalnızca bugünün haberlerini taşıdığı için seçeneklerin hepsi
-                  aynı sonucu verirdi. */}
-              <div className="flex items-center space-x-2 w-full sm:w-auto text-[11px] text-slate-500">
+              {/* Date Range Selection */}
+              <div className="flex items-center space-x-2 w-full sm:w-auto">
                 <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-slate-400 font-medium whitespace-nowrap">Bugünün akışı</span>
-                {meta && (
-                  <span className="font-mono text-slate-600">
-                    · {meta.sources}/{meta.total} kaynak · {(meta.elapsedMs / 1000).toFixed(1)} sn
-                  </span>
-                )}
+                <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">Zaman Aralığı:</span>
+                <div className="flex items-center space-x-1 bg-slate-950 border border-slate-800 p-1 rounded-xl w-full sm:w-auto">
+                  <button
+                    id="date-filter-all"
+                    onClick={() => setDateRange("all")}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer flex-1 sm:flex-none text-center ${
+                      dateRange === "all" ? "bg-slate-850 text-sky-400 font-bold" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Tümü (14g)
+                  </button>
+                  <button
+                    id="date-filter-24h"
+                    onClick={() => setDateRange("24h")}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer flex-1 sm:flex-none text-center ${
+                      dateRange === "24h" ? "bg-slate-850 text-sky-400 font-bold" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    Son 24s
+                  </button>
+                  <button
+                    id="date-filter-3d"
+                    onClick={() => setDateRange("3d")}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer flex-1 sm:flex-none text-center ${
+                      dateRange === "3d" ? "bg-slate-850 text-sky-400 font-bold" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    3 Gün
+                  </button>
+                  <button
+                    id="date-filter-7d"
+                    onClick={() => setDateRange("7d")}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer flex-1 sm:flex-none text-center ${
+                      dateRange === "7d" ? "bg-slate-850 text-sky-400 font-bold" : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    1 Hafta
+                  </button>
+                </div>
               </div>
 
               {/* Sorting Switch */}
@@ -365,6 +397,7 @@ export default function App() {
                   setSearchQuery("");
                   setSelectedCategory("Tümü");
                   setSelectedLang("all");
+                  setDateRange("all");
                 }}
                 className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs px-4 py-2 rounded-xl transition-all cursor-pointer"
               >
