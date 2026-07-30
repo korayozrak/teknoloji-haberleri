@@ -16,7 +16,6 @@ import {
 export default function App() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
@@ -46,12 +45,8 @@ export default function App() {
   // Haber akışını statik veri dosyasından çek.
   // Dosya GitHub Actions cron'u tarafından üretilir; cache-bust parametresi
   // CDN'in bayat kopyası yerine en son üretilen sürümü almamızı sağlar.
-  const fetchNews = async (force: boolean = false) => {
-    if (force) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
+  const fetchNews = async () => {
+    setLoading(true);
     setError(null);
 
     try {
@@ -65,7 +60,6 @@ export default function App() {
       setError(err.message || "Haberler yüklenirken beklenmedik bir hata oluştu.");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -174,25 +168,20 @@ export default function App() {
               <span className="flex items-center justify-center w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
               <span className="text-slate-400 font-medium">Toplam: <strong className="text-slate-200">{news.length} Haber</strong></span>
             </div>
-
-            <div className="flex items-center space-x-1.5 text-xs text-slate-500">
-              <RefreshCw className="w-3 h-3" />
-              <span>Akış güncellendi: <strong className="text-slate-400 font-medium">{formatLastUpdated(lastUpdated)}</strong></span>
-            </div>
           </div>
 
-          {/* Header Action Controls */}
-          <div className="flex items-center space-x-2.5">
-            <button
-              id="header-btn-refresh"
-              onClick={() => fetchNews(true)}
-              disabled={refreshing || loading}
-              className="flex items-center bg-slate-900 hover:bg-slate-800 active:scale-95 disabled:opacity-50 text-slate-300 font-semibold text-xs px-3 py-2 rounded-xl border border-slate-800 transition-all cursor-pointer"
-              title="Akışı yeniden yükle (haberler 15 dakikada bir otomatik güncellenir)"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${refreshing ? "animate-spin text-sky-400" : ""}`} />
-              Yenile
-            </button>
+          {/* Tazelik göstergesi.
+              Yenile butonu buradaydı; akış statik bir dosyadan geldiği ve
+              yalnızca cron koşusuyla değiştiği için kullanıcıya yeni haber
+              getiremiyordu, kaldırıldı. Yerine verinin yaşı gösteriliyor —
+              butonun aksine bu bilgi doğru ve eyleme dönük. */}
+          <div
+            className="flex items-center space-x-1.5 bg-slate-950 border border-slate-900 rounded-xl px-3 py-1.5 text-xs text-slate-500 flex-shrink-0"
+            title="Haberler 15 dakikada bir otomatik güncellenir"
+          >
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin text-sky-400" : ""}`} />
+            <span className="hidden sm:inline">Akış güncellendi:</span>
+            <strong className="text-slate-400 font-medium">{formatLastUpdated(lastUpdated)}</strong>
           </div>
         </div>
       </header>
@@ -352,7 +341,7 @@ export default function App() {
               </div>
               <button
                 id="btn-retry-fetch"
-                onClick={() => fetchNews(true)}
+                onClick={() => fetchNews()}
                 className="bg-red-500/20 hover:bg-red-500/35 text-red-200 text-xs px-3 py-1 rounded-lg ml-auto cursor-pointer"
               >
                 Yeniden Dene
