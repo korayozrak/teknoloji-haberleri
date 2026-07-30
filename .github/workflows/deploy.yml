@@ -1,10 +1,12 @@
 name: Haberleri güncelle ve yayınla
 
 on:
-  # Haber akışını 30 dakikada bir tazele.
+  # Haber akışını 15 dakikada bir tazele.
   # Not: GitHub cron'u garantili değildir, yoğun saatlerde gecikebilir.
+  # 5 dakikaya indirmenin faydası yok: kaynakların kendi RSS gecikmesi zaten
+  # birkaç dakika ve GitHub sık cron'ları yoğunlukta atlıyor.
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/15 * * * *'
   push:
     branches: [main]
   workflow_dispatch:

@@ -188,7 +188,7 @@ export default function App() {
               onClick={() => fetchNews(true)}
               disabled={refreshing || loading}
               className="flex items-center bg-slate-900 hover:bg-slate-800 active:scale-95 disabled:opacity-50 text-slate-300 font-semibold text-xs px-3 py-2 rounded-xl border border-slate-800 transition-all cursor-pointer"
-              title="Akışı yeniden yükle (haberler 30 dakikada bir otomatik güncellenir)"
+              title="Akışı yeniden yükle (haberler 15 dakikada bir otomatik güncellenir)"
             >
               <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${refreshing ? "animate-spin text-sky-400" : ""}`} />
               Yenile
@@ -425,7 +425,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           <p>© {new Date().getFullYear()} Teknoloji Haberleri. Bütün Hakları Saklıdır.</p>
           <p className="max-w-md mx-auto text-slate-600 leading-relaxed font-sans">
-            Haber verileri 22 bağımsız RSS yayınlayıcısından 30 dakikada bir otomatik toplanır. Haberler kaynak dilinde sunulur; Türkçe ve İngilizce akışlar yukarıdaki sekmelerden ayrılabilir.
+            Haber verileri 22 bağımsız RSS yayınlayıcısından 15 dakikada bir otomatik toplanır. Haberler kaynak dilinde sunulur; Türkçe ve İngilizce akışlar yukarıdaki sekmelerden ayrılabilir.
           </p>
         </div>
       </footer>

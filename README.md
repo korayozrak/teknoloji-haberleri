@@ -6,13 +6,13 @@ akışlar arayüzden ayrılabilir.
 
 **Sunucusuz ve anahtarsız.** Site tamamen statiktir; RSS taraması ve görsel
 çözümlemesi ziyaretçi istek attığında değil, GitHub Actions cron'u içinde
-30 dakikada bir yapılır. Ziyaretçiye hazır bir `news.json` sunulur — bekleme yok,
+15 dakikada bir yapılır. Ziyaretçiye hazır bir `news.json` sunulur — bekleme yok,
 uyuyan sunucu yok, API anahtarı yok, barındırma ücreti yok.
 
 ## Nasıl çalışıyor
 
 ```
-GitHub Actions (30 dk'da bir)
+GitHub Actions (15 dk'da bir)
   ├─ Arşivi Actions cache'inden geri yükle
   ├─ 22 RSS kaynağını paralel tara
   ├─ Teknoloji dışı içeriği ele (oto bakım, kupon spam'i, genel ekonomi...)
@@ -40,7 +40,7 @@ açıklama alanına içerik değil "Comments" gibi gezinme metni koyduğu için.
 
 ### Arşiv neden repoya commit edilmiyor
 
-`news.json` ~400 KB. 30 dakikada bir commit edilse yılda ~2 GB'lık git nesnesi
+`news.json` ~400 KB. 15 dakikada bir commit edilse yılda ~4 GB'lık git nesnesi
 birikir ve GitHub'ın önerdiği 1 GB depo sınırı aşılır. Bu yüzden arşiv
 **Actions cache'inde** tutulur; maliyeti sıfırdır ve depo temiz kalır.
 
@@ -82,7 +82,8 @@ Site `https://<kullanıcı-adı>.github.io/<depo-adı>/` adresinde yayına girer
 ## Bilinen sınırlar
 
 - **"Yenile" butonu RSS taramaz.** Yalnızca `news.json`'ı yeniden çeker; yeni
-  haberler 30 dakikalık cron'a bağlıdır.
+  haberler 15 dakikalık cron'a bağlıdır. Canlı tarama sunucu gerektirir:
+  ölçüldüğü kadarıyla 22 kaynağın yalnızca 3'ü tarayıcıya CORS izni veriyor.
 - **GitHub cron'u garantili değildir.** Yoğun saatlerde 5–20 dakika gecikebilir.
 - **Kategoriler kural tabanlıdır.** Anahtar kelime motoru Türkçe ve İngilizce
   için ayarlıdır ama her haberi doğru sınıflandıramaz; eşleşme bulunmayanlar
